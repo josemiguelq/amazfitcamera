@@ -10,50 +10,35 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Toast;
 
+import com.kieronquinn.library.amazfitcommunication.Transporter;
+
 import clc.sliteplugin.flowboard.AbstractPlugin;
 import clc.sliteplugin.flowboard.ISpringBoardHostStub;
 
 public class SpringboardPage extends AbstractPlugin {
 
-    /*
 
-        Example Springboard Page for the Amazfit Pace. This class requires the library JAR as well to work
+    private static final String TAG = "SergioMatadodeBug";
 
-        A springboard page has two modes: App Mode and Springboard Mode (my names, not Huami's)
-
-        App Mode is when the page is disabled in the launcher, and launched instead from the app list.
-        This behaves like a normal app, but with limited functionality. Swiping from the right to left should not be used in this mode as it is used to close the app
-
-        Springboard Mode is when the page is shown in the launcher, note that you should not use swipe left or right in this mode, to allow the user to swipe between pages
-
-     */
-
-    //Tag for logging purposes. Change this to something suitable
-    private static final String TAG = "SpringboardPage";
-    //As AbstractPlugin is not an Activity or Service, we can't just use "this" as a context or getApplicationContext, so Context is global to allow easier access
     private Context mContext;
-    //These get set up later
     private View mView;
     private boolean mHasActive = false;
     private ISpringBoardHostStub mHost = null;
+    private Transporter transporter;
 
-    //Much like a fragment, getView returns the content view of the page. You can set up your layout here
     @Override
     public View getView(Context paramContext) {
         Log.d(TAG, "getView()" + paramContext.getPackageName());
-        //Keep context
         this.mContext = paramContext;
-        //Inflate layout as required. The layout here being inflated is "widget_blank"
+        Log.d(TAG, "context" + this.mContext.getClass().getName());
+
         this.mView = LayoutInflater.from(paramContext).inflate(R.layout.widget_blank, null);
-        //Container is the root of the layout, we're just using it to set a click listener here (you can remove this if you wish)
         View container = this.mView.findViewById(R.id.container);
+
         container.setOnClickListener(new View.OnClickListener() {
             public void onClick(View paramAnonymousView) {
-                //Simply show a toast. Launching an activity is commented out but works as shown
                 Toast.makeText(mContext, "Clicked!", Toast.LENGTH_LONG).show();
-                /*Intent localIntent = new Intent(paramContext, MainActivity.class);
-                localIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                paramContext.startActivity(localIntent);*/
+                sendActionToTransporter();
             }
         });
         return this.mView;
@@ -69,10 +54,6 @@ public class SpringboardPage extends AbstractPlugin {
     @Override
     public Intent getWidgetIntent() {
         Intent localIntent = new Intent();
-        /*localIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-        localIntent.setAction("android.intent.action.MAIN");
-        localIntent.addCategory("android.intent.category.LAUNCHER");
-        localIntent.setComponent(new ComponentName(this.mContext.getPackageName(), "com.huami.watch.deskclock.countdown.CountdownListActivity"));*/
         return localIntent;
     }
 
@@ -81,6 +62,27 @@ public class SpringboardPage extends AbstractPlugin {
     public String getWidgetTitle(Context paramContext) {
         return this.mContext.getResources().getString(R.string.app_name);
     }
+
+    public void sendActionToTransporter() {
+        if (mContext == null) {
+            transporter = Transporter.get(this.mContext, "com.android.camera");
+        } else {
+            transporter = Transporter.get(mContext, "com.android.camera");
+        }
+
+        Log.d(TAG, "gerou transporter");
+        transporter.addChannelListener(new Transporter.ChannelListener() {
+            @Override
+            public void onChannelChanged(boolean ready) {
+                if (ready) {
+                    transporter.send("vol_up");
+                    Toast.makeText(mContext, "Gabriel!", Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+        transporter.connectTransportService();
+    }
+
 
     //Called when the page is shown
     @Override
@@ -96,10 +98,10 @@ public class SpringboardPage extends AbstractPlugin {
     }
 
     private void refreshView() {
+
         //Called when the page reloads, check for updates here if you need to
     }
 
-    //Returns the springboard host
     public ISpringBoardHostStub getHost() {
         return this.mHost;
     }
@@ -112,7 +114,6 @@ public class SpringboardPage extends AbstractPlugin {
         this.mHost = paramISpringBoardHostStub;
     }
 
-    //Called when the page is destroyed completely (in app mode). Same as the onDestroy method of an activity
     @Override
     public void onDestroy() {
         super.onDestroy();
